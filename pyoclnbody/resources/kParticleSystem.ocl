@@ -1,0 +1,28 @@
+kernel void calc_forces(global const float4 *r_buf, global float4 *w_buf) {
+  // Get ID positions in the workgroup
+  uint idx = get_global_id(0);
+  uint max = get_global_size(0);
+
+  // Start an accumulator
+  float4 accumulator = (float4)(0.0f);
+
+  // Loop through all of the particles
+  for (uint i = 0; i < max; i++) {
+    // Found ourselves, skip
+    if (i == idx) {
+      continue;
+    }
+    float distances = fast_distance(r_buf[i].xyz, r_buf[idx].xyz);
+    if(distances < 0.5f) {
+      distances = 0.5f;
+    }
+    accumulator.xyz =
+        mad(r_buf[i].xyz * r_buf[i].www, (float3)(distances),
+            accumulator.xyz);
+  }
+  accumulator /= max;
+  accumulator *= 0.05f;
+  // Store the result
+  w_buf[idx].xyz += accumulator.xyz;
+  w_buf[idx].w = r_buf[idx].w;
+}
